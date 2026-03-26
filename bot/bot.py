@@ -1,10 +1,17 @@
 import asyncio
 import os
+import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# ✅ ЛОГИ
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 WEB_APP_URL = os.getenv("WEB_APP_URL")
@@ -15,6 +22,8 @@ dp = Dispatcher()
 
 @dp.message(Command("start"))
 async def start_handler(message: types.Message):
+    logging.info(f"/start от пользователя {message.from_user.id}")
+
     keyboard = types.ReplyKeyboardMarkup(
         keyboard=[
             [
@@ -34,7 +43,14 @@ async def start_handler(message: types.Message):
     )
 
 
+# 🔥 лог всех сообщений (очень полезно)
+@dp.message()
+async def log_all(message: types.Message):
+    logging.info(f"Сообщение: {message.text}")
+
+
 async def main():
+    logging.info("Бот запущен 🚀")
     await dp.start_polling(bot)
 
 

@@ -1,19 +1,381 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Music App</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>No Limits Music</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --red-1: #ff0033;
+      --red-2: #cc0022;
+      --red-3: #ff3355;
+      --red-deep: #8b0000;
+      --red-glow: rgba(255, 0, 51, 0.4);
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Inter', sans-serif;
+      background: #0a0000;
+      color: #fff;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    .scene {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* === BACKGROUND === */
+    .bg-gradient {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 20%, rgba(255,0,51,0.35) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 50% at 80% 80%, rgba(180,0,30,0.25) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 10% 90%, rgba(255,50,80,0.15) 0%, transparent 60%),
+        linear-gradient(160deg, #1a0005 0%, #0a0000 50%, #110003 100%);
+      z-index: 0;
+    }
+
+    /* Animated noise grain */
+    .bg-grain {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      opacity: 0.04;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-size: 200px 200px;
+      animation: grain 0.5s steps(2) infinite;
+    }
+
+    @keyframes grain {
+      0%   { transform: translate(0, 0); }
+      25%  { transform: translate(-2%, -3%); }
+      50%  { transform: translate(3%, 1%); }
+      75%  { transform: translate(-1%, 4%); }
+      100% { transform: translate(2%, -2%); }
+    }
+
+    /* Pulsing ring */
+    .pulse-ring {
+      position: absolute;
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 0, 51, 0.15);
+      animation: ring-pulse 3s ease-in-out infinite;
+      z-index: 1;
+    }
+    .pulse-ring:nth-child(2) { width: 480px; height: 480px; animation-delay: 0.6s; }
+    .pulse-ring:nth-child(3) { width: 640px; height: 640px; animation-delay: 1.2s; }
+
+    @keyframes ring-pulse {
+      0%, 100% { opacity: 0.5; transform: scale(1); }
+      50% { opacity: 0.15; transform: scale(1.03); }
+    }
+
+    /* === CONTENT === */
+    .content {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      padding: 0 32px;
+      text-align: center;
+    }
+
+    /* Icon */
+    .icon-wrap {
+      width: 88px;
+      height: 88px;
+      border-radius: 28px;
+      background: linear-gradient(135deg, var(--red-3), var(--red-2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 32px;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.1),
+        0 20px 60px rgba(255, 0, 51, 0.5),
+        0 4px 16px rgba(0,0,0,0.5);
+      animation: icon-float 4s ease-in-out infinite;
+      position: relative;
+    }
+
+    .icon-wrap::after {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 29px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent 60%);
+      pointer-events: none;
+    }
+
+    @keyframes icon-float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .icon-wrap svg {
+      width: 44px;
+      height: 44px;
+      fill: white;
+      filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+    }
+
+    /* Brand */
+    .brand {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--red-3);
+      margin-bottom: 12px;
+      opacity: 0;
+      animation: fade-up 0.7s 0.3s forwards;
+    }
+
+    /* Title */
+    .title {
+      font-size: clamp(36px, 9vw, 52px);
+      font-weight: 900;
+      line-height: 1.0;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+      opacity: 0;
+      animation: fade-up 0.7s 0.45s forwards;
+    }
+
+    .title span {
+      background: linear-gradient(135deg, #fff 30%, rgba(255,100,120,0.8));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .title-red {
+      display: block;
+      background: linear-gradient(135deg, var(--red-3), #ff6680) !important;
+      -webkit-background-clip: text !important;
+      -webkit-text-fill-color: transparent !important;
+      background-clip: text !important;
+    }
+
+    /* Subtitle */
+    .subtitle {
+      font-size: 15px;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.5);
+      line-height: 1.6;
+      max-width: 280px;
+      margin-top: 16px;
+      margin-bottom: 48px;
+      opacity: 0;
+      animation: fade-up 0.7s 0.6s forwards;
+    }
+
+    /* Button */
+    .btn-start {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      max-width: 320px;
+      height: 60px;
+      border-radius: 18px;
+      border: none;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.01em;
+      background: linear-gradient(135deg, var(--red-3) 0%, var(--red-2) 100%);
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.1) inset,
+        0 16px 48px rgba(255, 0, 51, 0.45),
+        0 4px 12px rgba(0,0,0,0.4);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      overflow: hidden;
+      opacity: 0;
+      animation: fade-up 0.7s 0.75s forwards;
+    }
+
+    .btn-start::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 50%;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.12), transparent);
+      border-radius: 18px 18px 0 0;
+      pointer-events: none;
+    }
+
+    .btn-start:active {
+      transform: scale(0.97);
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.08) inset,
+        0 8px 24px rgba(255, 0, 51, 0.35),
+        0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    .btn-start svg {
+      width: 20px;
+      height: 20px;
+      fill: white;
+      opacity: 0.9;
+    }
+
+    /* Ripple on tap */
+    .btn-start .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.25);
+      transform: scale(0);
+      animation: ripple-anim 0.5s ease-out forwards;
+      pointer-events: none;
+    }
+
+    @keyframes ripple-anim {
+      to { transform: scale(4); opacity: 0; }
+    }
+
+    /* Footer hint */
+    .hint {
+      position: absolute;
+      bottom: 32px;
+      font-size: 12px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.2);
+      letter-spacing: 0.02em;
+      opacity: 0;
+      animation: fade-up 0.7s 1s forwards;
+    }
+
+    /* Animations */
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Equalizer bars (decorative) */
+    .eq-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 18px;
+      margin-left: 4px;
+    }
+
+    .eq-bars span {
+      display: block;
+      width: 3px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.9);
+      animation: eq-bounce var(--dur) ease-in-out infinite alternate;
+    }
+
+    .eq-bars span:nth-child(1) { height: 8px;  --dur: 0.6s; }
+    .eq-bars span:nth-child(2) { height: 14px; --dur: 0.4s; animation-delay: 0.1s; }
+    .eq-bars span:nth-child(3) { height: 10px; --dur: 0.5s; animation-delay: 0.2s; }
+    .eq-bars span:nth-child(4) { height: 16px; --dur: 0.35s; animation-delay: 0.05s; }
+
+    @keyframes eq-bounce {
+      from { transform: scaleY(0.3); }
+      to   { transform: scaleY(1); }
+    }
+  </style>
 </head>
+<body>
 
-<body style="background:#111;color:white;font-family:sans-serif;text-align:center;margin-top:50px;">
+<div class="scene">
+  <div class="bg-gradient"></div>
+  <div class="bg-grain"></div>
 
-<h1>🎧 Music App</h1>
-<p>Мини-апп работает 🚀</p>
+  <!-- Pulse rings -->
+  <div class="pulse-ring"></div>
+  <div class="pulse-ring"></div>
+  <div class="pulse-ring"></div>
 
-<button onclick="alert('Play скоро будет')">
-  ▶️ Play
-</button>
+  <div class="content">
+    <!-- App icon -->
+    <div class="icon-wrap">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/>
+      </svg>
+    </div>
+
+    <div class="brand">No Limits Music</div>
+
+    <h1 class="title">
+      <span>Слушай</span>
+      <span class="title-red">всё.</span>
+    </h1>
+
+    <p class="subtitle">
+      Музыка без цензуры и ограничений — прямо в Telegram
+    </p>
+
+    <button class="btn-start" id="startBtn">
+      <span class="eq-bars">
+        <span></span><span></span><span></span><span></span>
+      </span>
+      Начать слушать
+    </button>
+  </div>
+
+  <p class="hint">No Limits Music · 2025</p>
+</div>
+
+<script>
+  // Ripple effect
+  const btn = document.getElementById('startBtn');
+  btn.addEventListener('pointerdown', function(e) {
+    const rect = btn.getBoundingClientRect();
+    const ripple = document.createElement('span');
+    ripple.className = 'ripple';
+    const size = Math.max(rect.width, rect.height);
+    ripple.style.cssText = `
+      width: ${size}px;
+      height: ${size}px;
+      left: ${e.clientX - rect.left - size / 2}px;
+      top: ${e.clientY - rect.top - size / 2}px;
+    `;
+    btn.appendChild(ripple);
+    ripple.addEventListener('animationend', () => ripple.remove());
+  });
+
+  btn.addEventListener('click', function() {
+    window.location.href = 'home.html';
+  });
+
+  // Telegram WebApp init
+  if (window.Telegram?.WebApp) {
+    window.Telegram.WebApp.ready();
+    window.Telegram.WebApp.expand();
+  }
+</script>
 
 </body>
 </html>

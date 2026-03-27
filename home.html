@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>No Limits Music — Player</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after {
+      margin: 0; padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --red-1: #ff0033;
+      --red-2: #cc0022;
+      --red-3: #ff3355;
+      --red-deep: #8b0000;
+      --red-glow: rgba(255, 0, 51, 0.4);
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      font-family: 'Inter', sans-serif;
+      background: #0a0000;
+      color: #fff;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      overflow: hidden;
+    }
+
+    /* ====== BACKGROUND ====== */
+    .bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255,0,51,0.3) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 40% at 90% 80%, rgba(180,0,30,0.2) 0%, transparent 60%),
+        linear-gradient(160deg, #1a0005 0%, #0a0000 50%, #110003 100%);
+      transition: background 1s ease;
+    }
+
+    .bg-grain {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-size: 200px 200px;
+      animation: grain 0.5s steps(2) infinite;
+      pointer-events: none;
+    }
+
+    @keyframes grain {
+      0%   { transform: translate(0,0); }
+      25%  { transform: translate(-2%,-3%); }
+      50%  { transform: translate(3%,1%); }
+      75%  { transform: translate(-1%,4%); }
+      100% { transform: translate(2%,-2%); }
+    }
+
+    /* ====== LAYOUT ====== */
+    .screen {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 0 24px;
+      padding-top: env(safe-area-inset-top, 16px);
+      padding-bottom: env(safe-area-inset-bottom, 16px);
+    }
+
+    /* ====== TOP BAR ====== */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0 8px;
+      opacity: 0;
+      animation: fade-up 0.5s 0.1s forwards;
+    }
+
+    .topbar-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--red-3);
+    }
+
+    .topbar-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: none;
+      background: rgba(255,255,255,0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .topbar-btn:active { background: rgba(255,255,255,0.12); }
+    .topbar-btn svg { width: 18px; height: 18px; fill: rgba(255,255,255,0.7); }
+
+    /* ====== COVER ====== */
+    .cover-section {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 0;
+      opacity: 0;
+      animation: fade-up 0.5s 0.2s forwards;
+    }
+
+    .cover-wrap {
+      position: relative;
+      width: min(72vw, 280px);
+      height: min(72vw, 280px);
+    }
+
+    .cover-glow {
+      position: absolute;
+      inset: -20px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,0,51,0.35) 0%, transparent 70%);
+      animation: glow-pulse 3s ease-in-out infinite;
+      filter: blur(20px);
+    }
+
+    @keyframes glow-pulse {
+      0%, 100% { opacity: 0.7; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.08); }
+    }
+
+    .cover {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 24px;
+      background: linear-gradient(135deg, #2a0008, #1a0005);
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.08),
+        0 32px 80px rgba(0,0,0,0.7),
+        0 8px 32px rgba(255,0,51,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.3s ease;
+    }
+
+    .cover.playing {
+      animation: cover-breathe 4s ease-in-out infinite;
+    }
+
+    @keyframes cover-breathe {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+    }
+
+    .cover-art {
+      width: 60%;
+      height: 60%;
+      opacity: 0.15;
+    }
+
+    .cover-art svg {
+      width: 100%;
+      height: 100%;
+      fill: var(--red-3);
+    }
+
+    /* Vinyl lines */
+    .cover::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-conic-gradient(
+        rgba(255,255,255,0.02) 0deg, rgba(255,255,255,0.02) 1deg,
+        transparent 1deg, transparent 6deg
+      );
+      border-radius: 24px;
+    }
+
+    /* ====== TRACK INFO ====== */
+    .track-info {
+      padding: 4px 0 20px;
+      opacity: 0;
+      animation: fade-up 0.5s 0.3s forwards;
+    }
+
+    .track-name {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+
+    .track-artist {
+      font-size: 14px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.45);
+    }
+
+    .track-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 2px;
+    }
+
+    .like-btn {
+      width: 36px;
+      height: 36px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+
+    .like-btn:active { transform: scale(0.85); }
+
+    .like-btn svg {
+      width: 22px;
+      height: 22px;
+      fill: none;
+      stroke: rgba(255,255,255,0.35);
+      stroke-width: 2;
+      transition: fill 0.2s, stroke 0.2s;
+    }
+
+    .like-btn.liked svg {
+      fill: var(--red-3);
+      stroke: var(--red-3);
+    }
+
+    /* ====== PROGRESS ====== */
+    .progress-section {
+      padding: 0 0 20px;
+      opacity: 0;
+      animation: fade-up 0.5s 0.35s forwards;
+    }
+
+    .progress-bar-wrap {
+      position: relative;
+      height: 4px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 8px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--red-2), var(--red-3));
+      width: 35%;
+      position: relative;
+      transition: width 0.1s linear;
+    }
+
+    .progress-bar-fill::after {
+      content: '';
+      position: absolute;
+      right: -5px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 8px rgba(255,0,51,0.6);
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .progress-bar-wrap:hover .progress-bar-fill::after,
+    .progress-bar-wrap.dragging .progress-bar-fill::after {
+      opacity: 1;
+    }
+
+    .progress-times {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.3);
+    }
+
+    /* ====== CONTROLS ====== */
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 4px 24px;
+      opacity: 0;
+      animation: fade-up 0.5s 0.4s forwards;
+    }
+
+    .ctrl-btn {
+      width: 44px;
+      height: 44px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: transform 0.15s, opacity 0.15s;
+    }
+
+    .ctrl-btn:active { transform: scale(0.88); opacity: 0.7; }
+
+    .ctrl-btn svg {
+      width: 24px;
+      height: 24px;
+      fill: rgba(255,255,255,0.5);
+    }
+
+    .ctrl-btn.active svg { fill: var(--red-3); }
+
+    /* Play button */
+    .play-btn {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--red-3), var(--red-2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.1) inset,
+        0 8px 32px rgba(255,0,51,0.5),
+        0 4px 12px rgba(0,0,0,0.4);
+      transition: transform 0.15s, box-shadow 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .play-btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 50%;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.15), transparent);
+      border-radius: 50% 50% 0 0;
+    }
+
+    .play-btn:active {
+      transform: scale(0.93);
+      box-shadow: 0 4px 16px rgba(255,0,51,0.35), 0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    .play-btn svg {
+      width: 28px;
+      height: 28px;
+      fill: #fff;
+    }
+
+    .play-btn .icon-pause { display: none; }
+    .play-btn.playing .icon-play { display: none; }
+    .play-btn.playing .icon-pause { display: block; }
+
+    /* ====== VOLUME ====== */
+    .volume-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 20px;
+      opacity: 0;
+      animation: fade-up 0.5s 0.45s forwards;
+    }
+
+    .vol-icon svg {
+      width: 18px;
+      height: 18px;
+      fill: rgba(255,255,255,0.3);
+    }
+
+    .vol-bar-wrap {
+      flex: 1;
+      height: 3px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .vol-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.3), rgba(255,255,255,0.6));
+      width: 70%;
+    }
+
+    /* ====== BOTTOM NAV ====== */
+    .bottom-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 12px 0 4px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      opacity: 0;
+      animation: fade-up 0.5s 0.5s forwards;
+    }
+
+    .nav-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      padding: 6px 16px;
+      border-radius: 12px;
+      transition: background 0.15s;
+    }
+
+    .nav-btn:active { background: rgba(255,255,255,0.05); }
+
+    .nav-btn svg {
+      width: 22px;
+      height: 22px;
+      fill: rgba(255,255,255,0.25);
+      transition: fill 0.15s;
+    }
+
+    .nav-btn span {
+      font-size: 10px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.25);
+      letter-spacing: 0.03em;
+      transition: color 0.15s;
+    }
+
+    .nav-btn.active svg { fill: var(--red-3); }
+    .nav-btn.active span { color: var(--red-3); }
+
+    /* ====== ANIMATIONS ====== */
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Ripple */
+    .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      transform: scale(0);
+      animation: ripple-anim 0.5s ease-out forwards;
+      pointer-events: none;
+    }
+
+    @keyframes ripple-anim {
+      to { transform: scale(4); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg" id="bg"></div>
+<div class="bg-grain"></div>
+
+<div class="screen">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <span class="topbar-title">No Limits Music</span>
+    <div style="display:flex;gap:8px">
+      <button class="topbar-btn" title="Очередь">
+        <svg viewBox="0 0 24 24"><path d="M3 18h13v-2H3v2zm0-5h10v-2H3v2zm0-7v2h13V6H3zm18 9.59L17.42 12 21 8.41 19.59 7l-5 5 5 5L21 15.59z"/></svg>
+      </button>
+      <button class="topbar-btn" title="Поиск" onclick="window.location.href='search.html'">
+        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- COVER -->
+  <div class="cover-section">
+    <div class="cover-wrap">
+      <div class="cover-glow" id="coverGlow"></div>
+      <div class="cover" id="cover">
+        <div class="cover-art">
+          <svg viewBox="0 0 24 24"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRACK INFO -->
+  <div class="track-info">
+    <div class="track-meta">
+      <div>
+        <div class="track-name" id="trackName">Выбери трек</div>
+        <div class="track-artist" id="trackArtist">No Limits Music</div>
+      </div>
+      <button class="like-btn" id="likeBtn" title="Лайк">
+        <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-section">
+    <div class="progress-bar-wrap" id="progressWrap">
+      <div class="progress-bar-fill" id="progressFill"></div>
+    </div>
+    <div class="progress-times">
+      <span id="timeElapsed">0:00</span>
+      <span id="timeDuration">0:00</span>
+    </div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls">
+    <button class="ctrl-btn" id="shuffleBtn" title="Перемешать">
+      <svg viewBox="0 0 24 24"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+    </button>
+
+    <button class="ctrl-btn" id="prevBtn" title="Назад">
+      <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+    </button>
+
+    <button class="play-btn" id="playBtn" title="Играть/Пауза">
+      <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+    </button>
+
+    <button class="ctrl-btn" id="nextBtn" title="Вперёд">
+      <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+    </button>
+
+    <button class="ctrl-btn" id="repeatBtn" title="Повтор">
+      <svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
+    </button>
+  </div>
+
+  <!-- VOLUME -->
+  <div class="volume-section">
+    <span class="vol-icon">
+      <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+    </span>
+    <div class="vol-bar-wrap" id="volWrap">
+      <div class="vol-bar-fill" id="volFill"></div>
+    </div>
+    <span class="vol-icon">
+      <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+    </span>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <button class="nav-btn active" onclick="window.location.href='home.html'">
+      <svg viewBox="0 0 24 24"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>
+      <span>Плеер</span>
+    </button>
+    <button class="nav-btn" onclick="">
+      <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      <span>Поиск</span>
+    </button>
+    <button class="nav-btn" onclick="">
+      <svg viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/></svg>
+      <span>Плейлисты</span>
+    </button>
+    <button class="nav-btn" onclick="">
+      <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+      <span>Профиль</span>
+    </button>
+  </div>
+
+</div>
+
+<script>
+  // Telegram WebApp
+  if (window.Telegram?.WebApp) {
+    window.Telegram.WebApp.ready();
+    window.Telegram.WebApp.expand();
+  }
+
+  // ===== STATE =====
+  let isPlaying = false;
+  let isLiked = false;
+  let isShuffle = false;
+  let isRepeat = false;
+  let progress = 0.35;
+  let volume = 0.7;
+  let progressInterval = null;
+
+  const playBtn = document.getElementById('playBtn');
+  const likeBtn = document.getElementById('likeBtn');
+  const shuffleBtn = document.getElementById('shuffleBtn');
+  const repeatBtn = document.getElementById('repeatBtn');
+  const progressFill = document.getElementById('progressFill');
+  const progressWrap = document.getElementById('progressWrap');
+  const volFill = document.getElementById('volFill');
+  const volWrap = document.getElementById('volWrap');
+  const cover = document.getElementById('cover');
+  const timeElapsed = document.getElementById('timeElapsed');
+  const timeDuration = document.getElementById('timeDuration');
+
+  // ===== HELPERS =====
+  function formatTime(sec) {
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
+  function updateProgress() {
+    progressFill.style.width = (progress * 100) + '%';
+    timeElapsed.textContent = formatTime(progress * 213);
+    timeDuration.textContent = '3:33';
+  }
+
+  // ===== PLAY/PAUSE =====
+  playBtn.addEventListener('click', function () {
+    isPlaying = !isPlaying;
+    playBtn.classList.toggle('playing', isPlaying);
+    cover.classList.toggle('playing', isPlaying);
+
+    if (isPlaying) {
+      progressInterval = setInterval(() => {
+        progress = Math.min(progress + 0.001, 1);
+        if (progress >= 1) { progress = 0; isPlaying = false; playBtn.classList.remove('playing'); cover.classList.remove('playing'); clearInterval(progressInterval); }
+        updateProgress();
+      }, 200);
+    } else {
+      clearInterval(progressInterval);
+    }
+
+    // Ripple
+    addRipple(playBtn);
+  });
+
+  // ===== LIKE =====
+  likeBtn.addEventListener('click', function () {
+    isLiked = !isLiked;
+    likeBtn.classList.toggle('liked', isLiked);
+    likeBtn.style.transform = 'scale(1.3)';
+    setTimeout(() => likeBtn.style.transform = '', 200);
+  });
+
+  // ===== SHUFFLE =====
+  shuffleBtn.addEventListener('click', function () {
+    isShuffle = !isShuffle;
+    shuffleBtn.classList.toggle('active', isShuffle);
+  });
+
+  // ===== REPEAT =====
+  repeatBtn.addEventListener('click', function () {
+    isRepeat = !isRepeat;
+    repeatBtn.classList.toggle('active', isRepeat);
+  });
+
+  // ===== PREV / NEXT =====
+  document.getElementById('prevBtn').addEventListener('click', function () {
+    progress = 0;
+    updateProgress();
+  });
+
+  document.getElementById('nextBtn').addEventListener('click', function () {
+    progress = 0;
+    updateProgress();
+  });
+
+  // ===== PROGRESS SEEK =====
+  progressWrap.addEventListener('click', function (e) {
+    const rect = progressWrap.getBoundingClientRect();
+    progress = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    updateProgress();
+  });
+
+  // ===== VOLUME =====
+  volWrap.addEventListener('click', function (e) {
+    const rect = volWrap.getBoundingClientRect();
+    volume = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    volFill.style.width = (volume * 100) + '%';
+  });
+
+  // ===== RIPPLE =====
+  function addRipple(el) {
+    const ripple = document.createElement('span');
+    ripple.className = 'ripple';
+    const size = Math.max(el.offsetWidth, el.offsetHeight);
+    ripple.style.cssText = `width:${size}px;height:${size}px;left:0;top:0;`;
+    el.appendChild(ripple);
+    ripple.addEventListener('animationend', () => ripple.remove());
+  }
+
+  // ===== INIT =====
+  updateProgress();
+  volFill.style.width = (volume * 100) + '%';
+</script>
+</body>
+</html>
